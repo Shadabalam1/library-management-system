@@ -1,0 +1,35 @@
+client/
+├── public/
+├── src/
+│   ├── components/
+│   │   ├── auth/
+│   │   ├── books/
+│   │   ├── borrow/
+│   │   ├── admin/
+│   │   ├── shared/
+│   │   └── layouts/
+│   ├── pages/
+│   │   ├── auth/
+│   │   ├── admin/
+│   │   ├── user/
+│   │   └── dashboard/
+│   ├── services/
+│   │   ├── api.js
+│   │   ├── authService.js
+│   │   ├── bookService.js
+│   │   ├── borrowService.js
+│   │   └── userService.js
+│   ├── utils/
+│   │   ├── constants.js
+│   │   └── helpers.js
+│   ├── hooks/
+│   │   └── useAuth.js
+│   ├── context/
+│   │   └── AuthContext.js
+│   ├── styles/
+│   │   ├── global.css
+│   │   └── components.css
+│   ├── App.js
+│   └── index.js
+├── package.json
+└── README.md
