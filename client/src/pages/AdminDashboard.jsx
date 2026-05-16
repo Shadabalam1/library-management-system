@@ -28,14 +28,46 @@ export default function AdminDashboard() {
   const [borrowedBooks, setBorrowedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+  
+  // ✅ NEW: State for delete loading
+  const [deletingUserId, setDeletingUserId] = useState(null);
 
-  // ✅ Add these functions
+  // ✅ New functions for admin management
   const handleAddAdmin = () => {
     setShowAdminModal(true);
   };
 
   const handleAdminAdded = () => {
     toast.success("New admin added successfully");
+  };
+
+  // ✅ NEW: Delete user function
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to delete "${userName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingUserId(userId);
+    try {
+      await API.delete(`/user/${userId}`);
+      
+      // Remove deleted user from local state
+      setUsers(prev => prev.filter(u => u._id !== userId));
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        totalUsers: Math.max(0, prev.totalUsers - 1)
+      }));
+      
+      toast.success("User deleted successfully");
+    } catch (error) {
+      const msg = error.response?.data?.message || "Failed to delete user";
+      toast.error(msg);
+      console.error("Delete User Error:", error.response?.data || error.message);
+    } finally {
+      setDeletingUserId(null);
+    }
   };
 
   // ✅ Fetch user borrow history
@@ -292,6 +324,10 @@ export default function AdminDashboard() {
   const handleAddBook = () => {
     navigate("/admin/add-book");
   };
+
+  const handleEditBook = (bookId) => {
+  navigate(`/admin/edit-book/${bookId}`);
+};
 
   const handleDeleteBook = async (bookId) => {
     if (window.confirm("Are you sure you want to delete this book?")) {
@@ -665,8 +701,18 @@ export default function AdminDashboard() {
                           <button className="text-indigo-600 hover:text-indigo-900 mr-3">
                             <i className="bi bi-pencil"></i>
                           </button>
-                          <button className="text-red-600 hover:text-red-900">
-                            <i className="bi bi-trash"></i>
+                          {/* ✅ FIXED: Delete button with onClick handler */}
+                          <button 
+                            onClick={() => handleDeleteUser(user._id, user.name)}
+                            className="text-red-600 hover:text-red-900"
+                            disabled={deletingUserId === user._id}
+                            title="Delete user"
+                          >
+                            {deletingUserId === user._id ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            ) : (
+                              <i className="bi bi-trash"></i>
+                            )}
                           </button>
                         </td>
                       </tr>
@@ -736,46 +782,51 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {books.map((book) => (
-                      <tr key={book._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {book.title}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {book.author}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ₹{book.price}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {book.quantity}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              book.availability
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {book.availability ? "Available" : "Not Available"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button className="text-indigo-600 hover:text-indigo-900 mr-3">
-                            <i className="bi bi-pencil"></i>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteBook(book._id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+
+{books.map((book) => (
+  <tr key={book._id} className="hover:bg-gray-50">
+    <td className="px-6 py-4 whitespace-nowrap">
+      <div className="text-sm font-medium text-gray-900">{book.title}</div>
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+      {book.author}
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+      ₹{book.price}
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+      {book.quantity}
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap">
+      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+        book.availability ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+      }`}>
+        {book.availability ? "Available" : "Not Available"}
+      </span>
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+      {/* ✅ FIXED: Edit button with onClick */}
+      <button
+        onClick={() => handleEditBook(book._id)}
+        className="text-indigo-600 hover:text-indigo-900 mr-3"
+        title="Edit book details"
+      >
+        <i className="bi bi-pencil"></i>
+      </button>
+      <button
+        onClick={() => handleDeleteBook(book._id)}
+        className="text-red-600 hover:text-red-900"
+        title="Delete book"
+      >
+        <i className="bi bi-trash"></i>
+      </button>
+    </td>
+  </tr>
+))}
+ 
+
+
+
                   </tbody>
                 </table>
               )}

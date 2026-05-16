@@ -33,3 +33,11 @@ export const isAuthorized =(...roles)=>{
     }
 
 }
+
+
+export const verifyAdmin = (req, res, next) => {
+  if (req.user?.role !== "Admin") { // ✅ Capital "A" matches your schema
+    return res.status(403).json({ success: false, message: "Admin access required" });
+  }
+  next();
+};

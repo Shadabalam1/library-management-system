@@ -12,6 +12,7 @@ import AddBook from "../pages/AddBook.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import MyBooks from "../pages/MyBooks.jsx"; // ✅ Ye line honi chahiye
+import EditBook from "../pages/EditBook";
 
 
 // ✅ Add Admin Protected Route
@@ -65,13 +66,14 @@ export default function AppRoutes() {
       {!hideNavbar && user && <Navbar />}
       <main>
         <Routes>
+        
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/password/reset/:token" element={<ResetPassword />} />
-          
+          <Route path="/admin/edit-book/:id" element={<EditBook />} />
           {/* ✅ User Protected Routes */}
           <Route
             path="/dashboard"

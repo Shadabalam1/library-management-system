@@ -161,3 +161,61 @@ export const returnBook = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Failed to return book", 500));
   }
 });
+
+
+
+
+
+
+export const getSingleBook = catchAsyncErrors(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorHandler("Invalid Book ID.", 400));
+  }
+
+  const book = await Book.findById(id);
+
+  if (!book) {
+    return next(new ErrorHandler("Book not found.", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    book,
+  });
+});
+
+
+export const updateBook = catchAsyncErrors(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new ErrorHandler("Invalid Book ID.", 400));
+  }
+
+  const { title, author, description, price, quantity } = req.body;
+
+  const book = await Book.findById(id);
+
+  if (!book) {
+    return next(new ErrorHandler("Book not found.", 404));
+  }
+
+  book.title = title || book.title;
+  book.author = author || book.author;
+  book.description = description || book.description;
+  book.price = price ?? book.price;
+  book.quantity = quantity ?? book.quantity;
+
+  // availability auto update
+  book.availability = book.quantity > 0;
+
+  await book.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Book updated successfully",
+    book,
+  });
+});

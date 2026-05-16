@@ -451,7 +451,6 @@ export const registerAdmin = async (req, res, next) => {
 
 
 
-// LAST ME YE ADD KAREIN:
 
 export const getResetPasswordToken = catchAsyncErrors(async (req, res, next) => {
   const { token } = req.params;
@@ -477,3 +476,29 @@ export const getResetPasswordToken = catchAsyncErrors(async (req, res, next) => 
   // Frontend page par redirect karein
   res.redirect(`${process.env.FRONTEND_URL}/password/reset/${token}`);
 });
+
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const requesterId = req.user._id || req.user.id;
+
+    // 🔒 Prevent self-deletion
+    if (id === requesterId.toString()) {
+      return res.status(400).json({ success: false, message: "You cannot delete your own account" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // 🔥 Hard delete (use soft delete if needed)
+    await User.findByIdAndDelete(id);
+    
+    res.status(200).json({ success: true, message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Delete User Error:", error);
+    res.status(500).json({ success: false, message: "Server error while deleting user" });
+  }
+};
