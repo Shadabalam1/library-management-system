@@ -6,9 +6,9 @@ export const sendToken =(user, statusCode, message, res)=>{
         ),
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: process.env.COOKIE_SAME_SITE || "lax",
         path: "/",
-        domain: process.env.NODE_ENV === "production" ? process.env.DOMAIN : "localhost"
+        ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {})
     })
     .json({
         success : true,

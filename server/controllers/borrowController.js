@@ -123,7 +123,7 @@ export const borrowedBooks = catchAsyncErrors(async(req, res, next)=>{
 
 export const getBorrowedBookForAdmin = catchAsyncErrors(async(req, res, next)=>{
     try {
-        const borrowedBooks = await Borrow.find({ status: { $ne: "returned" } })
+        const borrowedBooks = await Borrow.find({ returnDate: null })
             .populate({
                 path: 'user.id',
                 select: 'name email'
@@ -145,7 +145,7 @@ export const getBorrowedBookForAdmin = catchAsyncErrors(async(req, res, next)=>{
             dueDate: borrow.dueDate,
             price: borrow.price,
             fine: borrow.fine || 0,
-            status: borrow.status,
+            status: borrow.returnDate ? "returned" : "approved",
             isOverdue: new Date() > new Date(borrow.dueDate)
         }));
 
@@ -374,12 +374,10 @@ export const renewBorrowedBook = async (req, res) => {
     const { bookId } = req.params;
     const userId = req.user.id;
 
-    const Borrow = mongoose.model('Borrow');
-
     const borrowedBook = await Borrow.findOne({
-      bookId: bookId,
-      userId: userId,
-      returned: false
+            book: bookId,
+            "user.id": userId,
+            returnDate: null
     });
 
     if (!borrowedBook) {

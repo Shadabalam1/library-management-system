@@ -34,7 +34,7 @@ export default function AdminManagementModal({ isOpen, onClose, onAdminAdded }) 
 
     try {
       setLoading(true);
-      const response = await API.post("/auth/admin/register", {
+      await API.post("/auth/admin/register", {
         name: formData.name,
         email: formData.email,
         password: formData.password,

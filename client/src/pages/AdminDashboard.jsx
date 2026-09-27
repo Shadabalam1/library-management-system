@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import AdminManagementModal from "../components/AdminManagementModal.jsx";
 
 export default function AdminDashboard() {
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
       setSelectedUser(res.data.user);
       setUserBorrowHistory(res.data.borrowHistory);
       setShowUserModal(true);
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch user history");
     } finally {
       setLoadingUserHistory(false);
@@ -307,18 +307,6 @@ export default function AdminDashboard() {
       fetchBorrowedBooks();
     }
   }, [activeTab]);
-
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      await API.get("/auth/logout");
-      setUser(null);
-      toast.success("Logged out successfully");
-      navigate("/login");
-    } catch {
-      toast.error("Logout failed");
-    }
-  };
 
   // Handle book actions
   const handleAddBook = () => {

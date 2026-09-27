@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { catchAsyncErrors } from "../middlewares/catchAsyncErrors.js";
 
 import {Book} from "../models/bookModel.js"
+import { Borrow } from "../models/borrowModel.js";
 import ErrorHandler from "../middlewares/errorMiddleware.js"
 
 
@@ -62,9 +63,9 @@ export const renewBorrowedBook = async (req, res) => {
     const userId = req.user.id;
 
     const borrowedBook = await Borrow.findOne({
-      bookId: bookId,
-      userId: userId,
-      returned: false
+      book: bookId,
+      "user.id": userId,
+      returnDate: null
     });
 
     if (!borrowedBook) {

@@ -410,6 +410,13 @@ export const adminLogin = catchAsyncErrors(async (req, res, next) => {
 export const registerAdmin = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
+
+    if (!name || !email || !password || password.length < 8 || password.length > 16) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and an 8-16 character password are required"
+      });
+    }
     
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -420,11 +427,13 @@ export const registerAdmin = async (req, res, next) => {
       });
     }
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({
       name,
       email,
-      password,
-      role: "Admin"
+      password: hashedPassword,
+      role: "Admin",
+      accountVerified: true
     });
 
     await user.save();

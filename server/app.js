@@ -12,10 +12,14 @@ import userRouter from "./routes/userRouter.js";
 import expressFileupload from "express-fileupload";
 import notifyUser from "./services/notifyUser.js";
 import { removeUnverifiedAccount } from "./services/removeUnverifiedAccounts.js";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 
 export const app = express();
 
-config({ path: "./config/config.env" });
+config({
+  path: resolve(dirname(fileURLToPath(import.meta.url)), "config/config.env"),
+});
 
 // ✅ CORS Setup
 app.use(
@@ -46,6 +50,10 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/book", bookRouter);
 app.use("/api/v1/borrow", borrowRouter);
 app.use("/api/v1/user", userRouter);
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ success: true, status: "ok" });
+});
 
 // ✅ Background services
 notifyUser();

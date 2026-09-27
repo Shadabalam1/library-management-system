@@ -16,10 +16,6 @@ const ResetPassword = () => {
 
   const { password, confirmPassword } = formData;
 
-  const onChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
   const onSubmit = async (e) => {
     e.preventDefault();
     
@@ -56,6 +52,17 @@ const ResetPassword = () => {
     }
   };
 
+  const onChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  return (
+    <form onSubmit={onSubmit}>
+      <input name="password" type="password" value={password} onChange={onChange} required />
+      <input name="confirmPassword" type="password" value={confirmPassword} onChange={onChange} required />
+      <button type="submit" disabled={loading}>{loading ? 'Resetting...' : 'Reset password'}</button>
+    </form>
+  );
 };
 
 export default ResetPassword;

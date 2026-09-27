@@ -26,7 +26,7 @@ export default function EditBook() {
           price: res.data.book.price,
           quantity: res.data.book.quantity,
         });
-      } catch (error) {
+      } catch {
         toast.error("Failed to fetch book");
       }
     };
@@ -52,7 +52,7 @@ export default function EditBook() {
       toast.success("Book updated successfully");
 
       navigate("/admin/dashboard");
-    } catch (error) {
+    } catch {
       toast.error("Failed to update book");
     }
   };

@@ -45,6 +45,20 @@ const borrowSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    status: {
+        type: String,
+        enum: ["approved", "returned"],
+        default: "approved",
+    },
+    renewed: {
+        type: Boolean,
+        default: false,
+    },
+    renewedDate: Date,
+    renewalCount: {
+        type: Number,
+        default: 0,
+    },
 }, { timestamps: true });
 
 export const Borrow = mongoose.model("Borrow", borrowSchema);
