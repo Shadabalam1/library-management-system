@@ -7,7 +7,11 @@ import { User } from "../models/userModel.js";
 
 
 export const isAuthenticated = catchAsyncErrors(async (req, res, next)=>{
-    const { token } = req.cookies;
+    const cookieToken = req.cookies?.token;
+    const authorizationToken = req.headers.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization.split(" ")[1]
+        : null;
+    const token = cookieToken || authorizationToken;
 
     if (!token) {
         return next(new ErrorHandler(" User is not authenticated.", 400) )

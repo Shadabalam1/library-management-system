@@ -23,6 +23,10 @@ export default function Login() {
         response = await API.post("/auth/login", form); // Standard user login
       }
 
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
+
       toast.success(isAdminLogin ? "Admin login successful" : "Login successful");
       await fetchUser(); // Fetch the logged-in user details
 
