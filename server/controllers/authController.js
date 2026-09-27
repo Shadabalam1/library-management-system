@@ -49,7 +49,7 @@ export  const register = catchAsyncErrors(async (req, res, next)=>{
     
     const verificationCode = await user.generateVerificationCode()
      await user.save();
-     sendVerificationCode(verificationCode, email, res)
+    await sendVerificationCode(verificationCode, email, res)
     }
    
     catch (error){
