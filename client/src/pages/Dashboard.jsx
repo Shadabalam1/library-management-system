@@ -11,6 +11,8 @@ export default function Dashboard() {
   const [books, setBooks] = useState([]);
   const [myBorrows, setMyBorrows] = useState([]);
   const [borrowRequests, setBorrowRequests] = useState([]);
+  const [submittingBookId, setSubmittingBookId] = useState(null);
+  const [bookSearch, setBookSearch] = useState("");
 
   // ✅ Add debug logs in fetchData function
   const fetchData = async () => {
@@ -108,6 +110,7 @@ export default function Dashboard() {
 
   // ✅ Request to borrow a book
   const handleBorrowRequest = async (bookId) => {
+    setSubmittingBookId(bookId);
     try {
       const res = await API.post(`/borrow/request/${bookId}`);
       toast.success(res.data.message);
@@ -119,6 +122,8 @@ export default function Dashboard() {
       toast.error(
         error.response?.data?.message || "Failed to send borrow request"
       );
+    } finally {
+      setSubmittingBookId(null);
     }
   };
 
@@ -187,26 +192,34 @@ export default function Dashboard() {
     {
       title: "Books Borrowed",
       value: realStats.booksBorrowed.toString(),
-      icon: "📚",
-      color: "bg-blue-500",
+      description: "All-time reading activity",
+      icon: "bi-journal-bookmark-fill",
+      color: "bg-sky-500",
+      iconBg: "bg-sky-50 text-sky-600",
     },
     {
       title: "Active Loans",
       value: realStats.activeLoans.toString(),
-      icon: "📖",
-      color: "bg-green-500",
+      description: "Currently with you",
+      icon: "bi-book-half",
+      color: "bg-teal-500",
+      iconBg: "bg-teal-50 text-teal-600",
     },
     {
       title: "Due Soon",
       value: realStats.dueSoon.toString(),
-      icon: "⏰",
+      description: "Due within 3 days",
+      icon: "bi-alarm-fill",
       color: "bg-amber-500",
+      iconBg: "bg-amber-50 text-amber-600",
     },
     {
       title: "Total Fines",
       value: `₹${realStats.totalFines}`,
-      icon: "₹",
-      color: "bg-red-500",
+      description: "Outstanding balance",
+      icon: "bi-wallet2",
+      color: "bg-rose-500",
+      iconBg: "bg-rose-50 text-rose-600",
     },
   ];
 
@@ -224,8 +237,21 @@ export default function Dashboard() {
     (request) => request.status === "pending"
   );
 
+  const pendingBookIds = new Set(
+    pendingRequests.map((request) => request.book?._id || request.book)
+  );
+
+  const visibleBooks = books.filter((book) => {
+    const search = bookSearch.trim().toLowerCase();
+    return (
+      !search ||
+      book.title.toLowerCase().includes(search) ||
+      book.author.toLowerCase().includes(search)
+    );
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-[#f4f7f9]">
       {/* Hidden file input */}
       <input
         type="file"
@@ -237,14 +263,16 @@ export default function Dashboard() {
       />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
         {/* Welcome Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-indigo-950 to-teal-900 p-6 sm:p-8 mb-8 shadow-xl shadow-indigo-950/10">
+          <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full border-[28px] border-white/5"></div>
+          <div className="absolute right-24 -bottom-32 h-72 w-72 rounded-full border-[18px] border-teal-300/10"></div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center">
               <div className="relative">
                 <div
-                  className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                  className="w-16 h-16 bg-white/15 ring-4 ring-white/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/25 transition-colors overflow-hidden"
                   onClick={() =>
                     document.getElementById("profilePicInput")?.click()
                   }
@@ -258,7 +286,7 @@ export default function Dashboard() {
                       className="w-16 h-16 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-white text-xl font-bold">
+                    <span className="text-white text-xl font-bold uppercase">
                       {user?.name?.charAt(0)}
                     </span>
                   )}
@@ -267,19 +295,22 @@ export default function Dashboard() {
                   <i className="bi bi-camera text-xs text-gray-600"></i>
                 </div>
               </div>
-              <div className="ml-4">
-                <h1 className="text-2xl font-bold text-gray-900">
+              <div className="ml-4 relative z-10">
+                <p className="text-xs uppercase tracking-[0.2em] text-teal-200 font-semibold mb-1">
+                  Learner dashboard
+                </p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">
                   Welcome back, {user?.name}!
                 </h1>
-                <p className="text-gray-600">
-                  Happy reading! Here's your library dashboard.
+                <p className="text-indigo-100 mt-1">
+                  Keep your reading journey moving forward.
                 </p>
               </div>
             </div>
-            <div className="mt-4 sm:mt-0 flex space-x-3">
+            <div className="relative z-10 mt-6 sm:mt-0 flex flex-wrap gap-3">
               <button
                 onClick={() => navigate("/update-password")}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center px-4 py-2 border border-white/20 rounded-lg text-sm font-medium text-white bg-white/10 hover:bg-white/20 transition-colors"
               >
                 <i className="bi bi-key mr-2"></i>
                 Change Password
@@ -289,7 +320,7 @@ export default function Dashboard() {
                   setUser(null);
                   navigate("/login");
                 }}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors"
               >
                 <i className="bi bi-box-arrow-right mr-2"></i>
                 Logout
@@ -303,21 +334,22 @@ export default function Dashboard() {
           {stats.map((stat, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow stats-card"
+              className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all stats-card"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     {stat.title}
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">
+                  <p className="text-3xl font-bold text-slate-900 mt-2">
                     {stat.value}
                   </p>
+                  <p className="text-xs text-slate-400 mt-1">{stat.description}</p>
                 </div>
                 <div
-                  className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl`}
+                  className={`${stat.iconBg} w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-sm`}
                 >
-                  {stat.icon}
+                  <i className={`bi ${stat.icon}`}></i>
                 </div>
               </div>
             </div>
@@ -328,36 +360,40 @@ export default function Dashboard() {
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-8">
             {/* ✅ My Borrow Requests Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  My Borrow Requests
-                </h2>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-indigo-600 font-semibold">Activity</p>
+                  <h2 className="text-lg font-semibold text-slate-900">My Borrow Requests</h2>
+                </div>
+                <span className="min-w-8 h-8 px-2 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-sm font-bold">
+                  {pendingRequests.length}
+                </span>
               </div>
               <div className="space-y-4">
                 {pendingRequests.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
+                    <p className="text-slate-500 text-center py-6 bg-slate-50 rounded-xl">
                     No pending borrow requests.
                   </p>
                 ) : (
                   pendingRequests.map((request) => (
                     <div
                       key={request._id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center justify-between gap-4 p-4 border border-slate-200 rounded-xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors"
                     >
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">
+                        <h3 className="font-medium text-slate-900">
                           {request.book.title}
                         </h3>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-slate-500">
                           {request.book.author}
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          Pending
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                          Awaiting approval
                         </span>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-slate-400 mt-1">
                           {new Date(request.requestDate).toLocaleDateString()}
                         </p>
                       </div>
@@ -368,45 +404,45 @@ export default function Dashboard() {
             </div>
 
             {/* ✅ My Borrowed Books Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-slate-900">
                   My Borrowed Books
                 </h2>
                 <button
                   onClick={() => navigate("/my-books")}
-                  className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                  className="text-indigo-600 hover:text-indigo-800 text-sm font-semibold"
                 >
                   View All
                 </button>
               </div>
               <div className="space-y-4">
                 {activeBorrows.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
+                    <p className="text-slate-500 text-center py-6 bg-slate-50 rounded-xl">
                     You haven't borrowed any books yet.
                   </p>
                 ) : (
                   activeBorrows.map((borrow, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center justify-between gap-4 p-4 border border-slate-200 rounded-xl hover:border-teal-200 hover:bg-teal-50/30 transition-colors"
                     >
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">
+                        <h3 className="font-medium text-slate-900">
                           {borrow.bookTitle}
                         </h3>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-slate-500">
                           Borrowed:{" "}
                           {new Date(borrow.borrowedDate).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-slate-500">
                           Due: {new Date(borrow.dueDate).toLocaleDateString()}
                         </p>
                         <button
                           onClick={() => handleReturn(borrow.bookId)}
-                          className="mt-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                          className="mt-2 bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium"
                         >
                           Return
                         </button>
@@ -418,37 +454,73 @@ export default function Dashboard() {
             </div>
 
             {/* Available Books Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Available Books
-              </h2>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-teal-600 font-semibold">Explore</p>
+                  <h2 className="text-lg font-semibold text-slate-900">Available Books</h2>
+                </div>
+                <button onClick={() => navigate("/books")} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+                  Browse all
+                </button>
+              </div>
+              <div className="relative mb-4">
+                <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input
+                  type="search"
+                  value={bookSearch}
+                  onChange={(e) => setBookSearch(e.target.value)}
+                  placeholder="Search by title or author"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                />
+              </div>
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {books.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
-                    No books available.
+                {visibleBooks.length === 0 ? (
+                    <p className="text-slate-500 text-center py-6 bg-slate-50 rounded-xl">
+                    {books.length === 0
+                      ? "No books available."
+                      : "No books match your search."}
                   </p>
                 ) : (
-                  books.map((book) => (
+                  visibleBooks.map((book) => (
+                    (() => {
+                      const isRequestPending = pendingBookIds.has(book._id);
+
+                      return (
                     <div
                       key={book._id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center justify-between gap-3 p-3 border border-slate-200 rounded-xl hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors"
                     >
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">
+                      <div className="w-12 h-16 shrink-0 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
+                        {book.bookUrl ? (
+                          <img src={book.bookUrl} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        ) : (
+                          <i className="bi bi-book text-xl text-slate-300"></i>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-slate-900 truncate">
                           {book.title}
                         </h3>
-                        <p className="text-sm text-gray-600">{book.author}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm text-slate-500 truncate">{book.author}</p>
+                        <p className="text-xs text-slate-400">
                           {book.quantity} copies available
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        {book.availability && book.quantity > 0 ? (
+                        {isRequestPending ? (
+                          <span className="inline-flex items-center px-3 py-1 rounded text-sm bg-yellow-100 text-yellow-800">
+                            Request Submitted
+                          </span>
+                        ) : book.availability && book.quantity > 0 ? (
                           <button
                             onClick={() => handleBorrowRequest(book._id)}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm"
+                            disabled={submittingBookId === book._id}
+                            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm"
                           >
-                            Request Borrow
+                            {submittingBookId === book._id
+                              ? "Submitting..."
+                              : "Submit Request"}
                           </button>
                         ) : (
                           <span className="text-xs text-gray-500">
@@ -457,6 +529,8 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
+                      );
+                    })()
                   ))
                 )}
               </div>
@@ -466,14 +540,14 @@ export default function Dashboard() {
           {/* Right Column */}
           <div className="space-y-8">
             {/* Quick Actions */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">
                 Quick Actions
               </h2>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => navigate("/books")}
-                  className="flex flex-col items-center justify-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-search text-2xl text-indigo-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -482,7 +556,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => navigate("/my-books")}
-                  className="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-4 bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-book text-2xl text-blue-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -491,7 +565,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => navigate("/my-books")}
-                  className="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-4 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-arrow-repeat text-2xl text-green-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -500,7 +574,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => toast.info("Feature coming soon")}
-                  className="flex flex-col items-center justify-center p-4 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-4 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-exclamation-triangle text-2xl text-amber-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -512,8 +586,8 @@ export default function Dashboard() {
 
             {/* Account Info - Enhanced with loading state */}
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">
                 Account Information
               </h2>
               <div className="space-y-3">

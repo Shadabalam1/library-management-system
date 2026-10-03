@@ -203,6 +203,20 @@ export default function BookBrowsePage() {
                 key={book._id}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
               >
+                <div className="h-56 bg-gray-100 flex items-center justify-center overflow-hidden">
+                  {book.bookUrl ? (
+                    <img
+                      src={book.bookUrl}
+                      alt={`${book.title} cover`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <i className="bi bi-book text-5xl text-gray-300"></i>
+                  )}
+                </div>
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -243,6 +257,18 @@ export default function BookBrowsePage() {
                     <p className="text-sm text-gray-600 mb-4 line-clamp-3">
                       {book.description}
                     </p>
+                  )}
+
+                  {book.bookUrl && (
+                    <a
+                      href={book.bookUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-4"
+                    >
+                      <i className="bi bi-box-arrow-up-right mr-1"></i>
+                      Open book link
+                    </a>
                   )}
 
                   <div className="flex items-center justify-between">

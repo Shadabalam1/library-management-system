@@ -12,6 +12,9 @@ import {
     rejectBorrowRequest,
     getUserBorrowRequests,
     getPendingBorrowRequests,
+    getPendingReturnRequests,
+    approveReturnRequest,
+    rejectReturnRequest,
     returnBook,
     renewBorrowedBook
 } from "../controllers/borrowController.js"
@@ -36,6 +39,9 @@ router.put("/approve/:requestId", isAuthenticated, isAuthorized("Admin"), approv
 router.put("/reject/:requestId", isAuthenticated, isAuthorized("Admin"), rejectBorrowRequest);    
 router.get("/my-requests", isAuthenticated, getUserBorrowRequests);       
 router.get("/pending-requests", isAuthenticated, isAuthorized("Admin"), getPendingBorrowRequests); 
+router.get("/pending-return-requests", isAuthenticated, isAuthorized("Admin"), getPendingReturnRequests);
+router.put("/approve-return/:requestId", isAuthenticated, isAuthorized("Admin"), approveReturnRequest);
+router.put("/reject-return/:requestId", isAuthenticated, isAuthorized("Admin"), rejectReturnRequest);
 router.get("/all-records", isAuthenticated, isAuthorized("Admin"), getBorrowedBookForAdmin);
 router.post("/renew/:bookId", isAuthenticated, renewBorrowedBook);
 

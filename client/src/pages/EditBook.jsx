@@ -10,6 +10,8 @@ export default function EditBook() {
   const [formData, setFormData] = useState({
     title: "",
     author: "",
+    description: "",
+    bookUrl: "",
     price: "",
     quantity: "",
   });
@@ -23,6 +25,8 @@ export default function EditBook() {
         setFormData({
           title: res.data.book.title,
           author: res.data.book.author,
+          description: res.data.book.description || "",
+          bookUrl: res.data.book.bookUrl || "",
           price: res.data.book.price,
           quantity: res.data.book.quantity,
         });
@@ -45,6 +49,11 @@ export default function EditBook() {
   // Update book
   const handleUpdateBook = async (e) => {
     e.preventDefault();
+
+    if (formData.bookUrl && !/^https?:\/\/\S+$/i.test(formData.bookUrl)) {
+      toast.error("Book URL must start with http:// or https://");
+      return;
+    }
 
     try {
       await API.put(`/book/${id}`, formData);
@@ -84,6 +93,37 @@ export default function EditBook() {
           onChange={handleChange}
           className="w-full border p-3 rounded mb-4"
         />
+
+        <textarea
+          name="description"
+          placeholder="Description"
+          value={formData.description}
+          onChange={handleChange}
+          className="w-full border p-3 rounded mb-4"
+          rows="4"
+        />
+
+        <input
+          type="url"
+          name="bookUrl"
+          placeholder="Book Link / Cover Image URL (optional)"
+          value={formData.bookUrl}
+          onChange={handleChange}
+          className="w-full border p-3 rounded mb-4"
+        />
+
+        {formData.bookUrl && (
+          <div className="mb-4 w-32 h-44 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+            <img
+              src={formData.bookUrl}
+              alt="Book cover preview"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
 
         <input
           type="number"

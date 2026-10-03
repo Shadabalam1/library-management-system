@@ -41,6 +41,7 @@ const userSchema = new mongoose.Schema({
         bookTitle: String,
         borrowedDate: Date,
         dueDate: Date,
+        returnedDate: Date,
     },
 ],
 

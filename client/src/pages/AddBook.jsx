@@ -8,6 +8,7 @@ export default function AddBook() {
     title: "",
     author: "",
     description: "",
+    bookUrl: "",
     price: "",
     quantity: "",
   });
@@ -27,6 +28,10 @@ export default function AddBook() {
       // Validate form data
       if (!form.title.trim() || !form.author.trim()) {
         throw new Error("Title and Author are required");
+      }
+
+      if (form.bookUrl && !/^https?:\/\/\S+$/i.test(form.bookUrl)) {
+        throw new Error("Book URL must start with http:// or https://");
       }
 
       if (form.price <= 0) {
@@ -152,6 +157,31 @@ export default function AddBook() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                 placeholder="Enter book description"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Book Link / Cover Image URL (optional)
+              </label>
+              <input
+                type="url"
+                value={form.bookUrl}
+                onChange={(e) => setForm({ ...form, bookUrl: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                placeholder="https://example.com/book-cover.jpg"
+              />
+              {form.bookUrl && (
+                <div className="mt-3 w-32 h-44 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+                  <img
+                    src={form.bookUrl}
+                    alt="Book cover preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

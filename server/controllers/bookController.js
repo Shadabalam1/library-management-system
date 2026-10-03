@@ -9,13 +9,13 @@ import ErrorHandler from "../middlewares/errorMiddleware.js"
 
 export const addBook = catchAsyncErrors(async (req, res, next)=>{
     
-    const { title, author, description, price, quantity } = req.body;
+    const { title, author, description, bookUrl, price, quantity } = req.body;
         if (!title || !author || !description || price === undefined || quantity === undefined) {
         return next(new ErrorHandler("please fill all fields.", 400))
     }
 
 
-    const book = await Book.create({ title, author, description, price, quantity});
+    const book = await Book.create({ title, author, description, bookUrl, price, quantity});
     res.status(201).json({
         success : true,
         message : "Book added successfully",
@@ -195,7 +195,7 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Invalid Book ID.", 400));
   }
 
-  const { title, author, description, price, quantity } = req.body;
+  const { title, author, description, bookUrl, price, quantity } = req.body;
 
   const book = await Book.findById(id);
 
@@ -206,6 +206,7 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
   book.title = title || book.title;
   book.author = author || book.author;
   book.description = description || book.description;
+  book.bookUrl = bookUrl ?? book.bookUrl;
   book.price = price ?? book.price;
   book.quantity = quantity ?? book.quantity;
 

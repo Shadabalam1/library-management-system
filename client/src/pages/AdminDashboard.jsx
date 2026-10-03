@@ -25,6 +25,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [books, setBooks] = useState([]);
   const [borrowRequests, setBorrowRequests] = useState([]);
+  const [returnRequests, setReturnRequests] = useState([]);
   const [borrowedBooks, setBorrowedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -193,7 +194,7 @@ export default function AdminDashboard() {
 
   // Check if user is admin
   useEffect(() => {
-    if (user && user.role !== "Admin") {
+    if (user && user.role?.toLowerCase() !== "admin") {
       navigate("/dashboard");
     }
   }, [user, navigate]);
@@ -205,10 +206,11 @@ export default function AdminDashboard() {
         console.log("🔍 Fetching dashboard data...");
 
         // Fetch all required data in parallel
-        const [booksRes, requestsRes, usersRes] = await Promise.allSettled([
+        const [booksRes, requestsRes, usersRes, returnRequestsRes] = await Promise.allSettled([
           API.get("/book/all"),
           API.get("/borrow/pending-requests"),
           API.get("/user/all"),
+          API.get("/borrow/pending-return-requests"),
         ]);
 
         // Handle books data
@@ -241,6 +243,13 @@ export default function AdminDashboard() {
           console.log("⚠️ Failed to fetch users");
         }
 
+        if (returnRequestsRes.status === "fulfilled") {
+          setReturnRequests(returnRequestsRes.value.data.requests || []);
+        } else {
+          setReturnRequests([]);
+          console.log("⚠️ Failed to fetch return requests");
+        }
+
         // Calculate borrowed books from approved requests
         let borrowedCount = 0;
         if (requestsRes.status === "fulfilled") {
@@ -262,6 +271,7 @@ export default function AdminDashboard() {
         toast.error("Failed to fetch dashboard data");
         setBooks([]);
         setBorrowRequests([]);
+        setReturnRequests([]);
         setUsers([]);
         setStats({
           totalUsers: 0,
@@ -274,7 +284,7 @@ export default function AdminDashboard() {
       }
     };
 
-    if (user && user.role === "Admin") {
+    if (user && user.role?.toLowerCase() === "admin") {
       fetchData();
     }
   }, [user]);
@@ -296,6 +306,17 @@ export default function AdminDashboard() {
       console.log("❌ Error fetching borrowed books:", error);
       setBorrowedBooks([]);
       toast.error("Failed to load borrowed books");
+    }
+  };
+
+  const fetchReturnRequests = async () => {
+    try {
+      const res = await API.get("/borrow/pending-return-requests");
+      setReturnRequests(res.data.requests || []);
+    } catch (error) {
+      console.log("❌ Error fetching return requests:", error);
+      setReturnRequests([]);
+      toast.error("Failed to load return requests");
     }
   };
 
@@ -386,6 +407,27 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleApproveReturn = async (requestId) => {
+    try {
+      await API.put(`/borrow/approve-return/${requestId}`);
+      toast.success("Return approved");
+      await fetchReturnRequests();
+      await fetchBorrowedBooks();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to approve return");
+    }
+  };
+
+  const handleRejectReturn = async (requestId) => {
+    try {
+      await API.put(`/borrow/reject-return/${requestId}`);
+      toast.success("Return request rejected");
+      await fetchReturnRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to reject return");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-500">
@@ -395,12 +437,12 @@ export default function AdminDashboard() {
   }
 
   // Redirect non-admin users
-  if (user && user.role !== "Admin") {
+  if (user && user.role?.toLowerCase() !== "admin") {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-[#f4f7f9]">
       {/* ✅ Add Admin Management Modal */}
       <AdminManagementModal
         isOpen={showAdminModal}
@@ -411,17 +453,31 @@ export default function AdminDashboard() {
       {/* ✅ User History Modal */}
       <UserHistoryModal />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-indigo-950 to-teal-900 p-6 sm:p-8 mb-8 shadow-xl shadow-indigo-950/10">
+          <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full border-[28px] border-white/5"></div>
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-teal-200 font-semibold mb-2">Operations center</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Good to see you, {user?.name || "Admin"}.</h1>
+              <p className="text-indigo-100 mt-2 max-w-xl">Monitor your library, review requests, and keep the collection moving.</p>
+            </div>
+            <button onClick={handleAddBook} className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-400 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-teal-300 transition-colors">
+              <i className="bi bi-plus-lg"></i>
+              Add new book
+            </button>
+          </div>
+        </div>
         {/* Tabs Navigation */}
         <div className="mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 overflow-x-auto">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-2 shadow-sm">
+            <nav className="flex gap-1 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("dashboard")}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
                   activeTab === "dashboard"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 }`}
               >
                 <i className="bi bi-speedometer2 mr-2"></i>
@@ -432,8 +488,8 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab("users")}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
                   activeTab === "users"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 }`}
               >
                 <i className="bi bi-people mr-2"></i>
@@ -444,8 +500,8 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab("books")}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
                   activeTab === "books"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 }`}
               >
                 <i className="bi bi-book mr-2"></i>
@@ -456,8 +512,8 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab("requests")}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
                   activeTab === "requests"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 }`}
               >
                 <i className="bi bi-clipboard-check mr-2"></i>
@@ -471,12 +527,27 @@ export default function AdminDashboard() {
                 }}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
                   activeTab === "borrowed"
-                    ? "border-indigo-500 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 }`}
               >
                 <i className="bi bi-journal-bookmark mr-2"></i>
                 Borrow Records
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("returns");
+                  fetchReturnRequests();
+                }}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                  activeTab === "returns"
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                }`}
+              >
+                <i className="bi bi-box-arrow-in-left mr-2"></i>
+                Return Requests ({returnRequests.length})
               </button>
             </nav>
           </div>
@@ -489,73 +560,87 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div
                 onClick={() => setActiveTab("users")}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Total Users
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                    <p className="text-3xl font-bold text-slate-900 mt-2">
                       {stats.totalUsers}
                     </p>
                   </div>
-                  <div className="bg-blue-500 w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl">
-                    <i className="bi bi-people"></i>
+                  <div className="bg-sky-50 text-sky-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+                    <i className="bi bi-people-fill"></i>
                   </div>
                 </div>
               </div>
 
               <div
                 onClick={() => setActiveTab("books")}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Total Books
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                    <p className="text-3xl font-bold text-slate-900 mt-2">
                       {stats.totalBooks}
                     </p>
                   </div>
-                  <div className="bg-green-500 w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl">
-                    <i className="bi bi-book"></i>
+                  <div className="bg-teal-50 text-teal-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+                    <i className="bi bi-book-half"></i>
                   </div>
                 </div>
               </div>
 
-            
-
               <div
-                onClick={() => setActiveTab("requests")}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => setActiveTab("borrowed")}
+                className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Borrowed Books</p>
+                    <p className="text-3xl font-bold text-slate-900 mt-2">{stats.borrowedBooks}</p>
+                    <p className="text-xs text-slate-400 mt-1">Currently on loan</p>
+                  </div>
+                  <div className="bg-amber-50 text-amber-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+                    <i className="bi bi-journal-bookmark-fill"></i>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setActiveTab("requests")}
+                className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 hover:-translate-y-0.5 hover:shadow-lg transition-all cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Pending Requests
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                    <p className="text-3xl font-bold text-slate-900 mt-2">
                       {stats.pendingRequests}
                     </p>
                   </div>
-                  <div className="bg-red-500 w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl">
-                    <i className="bi bi-clipboard-check"></i>
+                  <div className="bg-rose-50 text-rose-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+                    <i className="bi bi-clipboard-check-fill"></i>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Quick Actions - Updated with Add Admin button */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">
                 Quick Actions
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <button
                   onClick={handleAddBook}
-                  className="flex flex-col items-center justify-center p-6 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-6 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-book text-3xl text-indigo-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -565,7 +650,7 @@ export default function AdminDashboard() {
 
                 <button
                   onClick={() => setActiveTab("users")}
-                  className="flex flex-col items-center justify-center p-6 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-6 bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-people text-3xl text-blue-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -575,7 +660,7 @@ export default function AdminDashboard() {
 
                 <button
                   onClick={() => setActiveTab("requests")}
-                  className="flex flex-col items-center justify-center p-6 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-6 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-clipboard-check text-3xl text-green-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -586,7 +671,7 @@ export default function AdminDashboard() {
                 {/* ✅ Add Admin Management Button */}
                 <button
                   onClick={handleAddAdmin}
-                  className="flex flex-col items-center justify-center p-6 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-6 bg-violet-50 hover:bg-violet-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-person-plus text-3xl text-purple-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -596,7 +681,7 @@ export default function AdminDashboard() {
 
                 <button
                   onClick={() => toast.info("Feature coming soon")}
-                  className="flex flex-col items-center justify-center p-6 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                  className="flex flex-col items-center justify-center p-6 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
                 >
                   <i className="bi bi-gear text-3xl text-amber-600 mb-2"></i>
                   <span className="text-sm font-medium text-gray-700">
@@ -890,6 +975,89 @@ export default function AdminDashboard() {
                           </button>
                           <button
                             onClick={() => handleRejectRequest(request._id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <i className="bi bi-x-circle"></i> Reject
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "returns" && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Return Requests ({returnRequests.length})
+              </h2>
+              <button
+                onClick={fetchReturnRequests}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              {returnRequests.length === 0 ? (
+                <div className="text-center py-12">
+                  <i className="bi bi-box-arrow-in-left text-4xl text-gray-300 mb-4"></i>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">
+                    No pending return requests
+                  </h3>
+                  <p className="text-gray-500">
+                    Return requests will appear here when users submit them.
+                  </p>
+                </div>
+              ) : (
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Book</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Borrow Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {returnRequests.map((request) => (
+                      <tr key={request._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{request.user?.name}</div>
+                          <div className="text-sm text-gray-500">{request.user?.email}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{request.book?.title}</div>
+                          <div className="text-sm text-gray-500">{request.book?.author}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {request.borrow?.borrowDate ? new Date(request.borrow.borrowDate).toLocaleDateString() : "Available after lookup"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {request.returnRequestedDate || request.requestDate
+                            ? new Date(request.returnRequestedDate || request.requestDate).toLocaleDateString()
+                            : "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            {request.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => handleApproveReturn(request._id)}
+                            className="text-green-600 hover:text-green-900 mr-3"
+                          >
+                            <i className="bi bi-check-circle"></i> Approve
+                          </button>
+                          <button
+                            onClick={() => handleRejectReturn(request._id)}
                             className="text-red-600 hover:text-red-900"
                           >
                             <i className="bi bi-x-circle"></i> Reject

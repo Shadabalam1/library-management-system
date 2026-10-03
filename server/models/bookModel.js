@@ -16,6 +16,22 @@ const bookSchema = new mongoose.Schema({
         required: true,
        
     },
+    bookUrl: {
+        type: String,
+        trim: true,
+        validate: {
+            validator: (value) => {
+                if (!value) return true;
+                try {
+                    const url = new URL(value);
+                    return url.protocol === "http:" || url.protocol === "https:";
+                } catch {
+                    return false;
+                }
+            },
+            message: "Book URL must be a valid HTTP or HTTPS URL.",
+        },
+    },
      price:{
         type: Number,
         required: true,

@@ -66,50 +66,49 @@ export const recordBorrowedBook = catchAsyncErrors(async(req, res, next)=>{
 export const returnBorrowedBook = catchAsyncErrors(async(req, res, next)=>{
     const {bookId} = req.params;
     const user = req.user;
-    
     const book = await Book.findById(bookId);
-    if (!book) {
-        return next(new ErrorHandler("Book not found.", 404));
-    }
+    if (!book) return next(new ErrorHandler("Book not found.", 404));
 
     const borrowedBook = user.borrowedBooks.find(
-        (b) => b.bookId.toString() === bookId && b.returned === false
+        (entry) => entry.bookId.toString() === bookId && entry.returned === false
     );
-
     if (!borrowedBook) {
         return next(new ErrorHandler("You have not borrowed this book.", 400));
     }
 
-    // Update user
-    borrowedBook.returned = true;
-    await user.save();
-
-    // Update book
-    book.quantity += 1;
-    book.availability = book.quantity > 0;
-    await book.save();
-
-    // Update borrow record
     const borrow = await Borrow.findOne({
         book: bookId,
         "user.id": user._id,
         returnDate: null,
     });
+    if (!borrow) return next(new ErrorHandler("Borrow record not found.", 404));
 
-    if (!borrow) {
-        return next(new ErrorHandler("You have not borrowed this book.", 400));
+    const existingRequest = await BorrowRequest.findOne({
+        requestType: "return",
+        borrow: borrow._id,
+        status: "pending",
+    });
+    if (existingRequest) {
+        return next(new ErrorHandler("A return request is already pending.", 400));
     }
 
-    borrow.returnDate = new Date();
     const fine = calculateFine(borrow.dueDate);
-    borrow.fine = fine;
-    await borrow.save();
-    
+    const returnRequest = await BorrowRequest.create({
+        requestType: "return",
+        borrow: borrow._id,
+        user: { id: user._id, name: user.name, email: user.email },
+        book: { id: book._id, title: book.title, author: book.author },
+        requestDate: new Date(),
+        returnRequestedDate: new Date(),
+        fine,
+        totalPrice: book.price + fine,
+    });
+
     res.status(200).json({
         success: true,
-        message: fine !== 0 
-            ? `The book has been returned successfully. The total charges, including a fine, are ₹${fine + book.price}`
-            : `The book has been returned successfully. The total charges are ₹${book.price}`,
+        message: "Return request sent to admin.",
+        returnRequest,
+        fine,
     });
 });
 
@@ -299,7 +298,10 @@ export const getUserBorrowRequests = catchAsyncErrors(async(req, res, next)=>{
 
 export const getPendingBorrowRequests = catchAsyncErrors(async(req, res, next)=>{
     try {
-        const requests = await BorrowRequest.find({status: "pending"})
+        const requests = await BorrowRequest.find({
+            status: "pending",
+            requestType: { $ne: "return" },
+        })
             .sort({ createdAt: -1 });
         
         res.status(200).json({
@@ -315,58 +317,79 @@ export const requestReturnBook = catchAsyncErrors(async(req, res, next)=>{
     const { bookId } = req.params;
     const userId = req.user._id;
 
-    // Find user and borrowed book
-    const user = await User.findById(userId);
-    const borrowedBook = user.borrowedBooks.find(
-        b => b.bookId.toString() === bookId && !b.returned
-    );
+    return returnBorrowedBook(req, res, next);
+});
 
-    if (!borrowedBook) {
-        return next(new ErrorHandler("You have not borrowed this book.", 400));
-    }
+export const getPendingReturnRequests = catchAsyncErrors(async (req, res) => {
+    const requests = await BorrowRequest.find({ requestType: "return", status: "pending" })
+        .populate("borrow", "borrowDate dueDate")
+        .sort({ requestDate: -1 });
+    res.status(200).json({ success: true, requests });
+});
 
-    const book = await Book.findById(bookId);
-    if (!book) {
-        return next(new ErrorHandler("Book not found.", 404));
-    }
-
-    // Calculate fine
-    const dueDate = new Date(borrowedBook.dueDate);
-    const today = new Date();
-    let fine = 0;
-    
-    if (today > dueDate) {
-        fine = calculateFine(dueDate);
-    }
-
-    // Create return request
-    const returnRequest = await BorrowRequest.create({
-        user: {
-            id: user._id,
-            name: user.name,
-            email: user.email
-        },
-        book: {
-            id: book._id,
-            title: book.title,
-            author: book.author
-        },
-        status: "return_requested",
+export const approveReturnRequest = catchAsyncErrors(async (req, res, next) => {
+    const request = await BorrowRequest.findOne({
+        _id: req.params.requestId,
         requestType: "return",
-        returnRequestedDate: new Date(),
-        fine: fine,
-        totalPrice: book.price + fine
+        status: "pending",
     });
+    if (!request) return next(new ErrorHandler("Pending return request not found.", 404));
 
-    res.status(201).json({
-        success: true,
-        message: fine > 0 
-            ? `Return request sent. Late return fine: ₹${fine}. Total amount: ₹${book.price + fine}`
-            : "Return request sent successfully.",
-        returnRequest,
-        fine,
-        total: book.price + fine
+    const borrow = await Borrow.findById(request.borrow);
+    if (!borrow || borrow.returnDate) {
+        return next(new ErrorHandler("Borrow record is already returned or missing.", 400));
+    }
+
+    const book = await Book.findById(request.book.id);
+    if (!book) return next(new ErrorHandler("Book not found.", 404));
+
+    const user = await User.findById(request.user.id);
+    const userBorrow = user?.borrowedBooks.find(
+        (entry) => entry.bookId.toString() === request.book.id.toString() && !entry.returned
+    );
+    if (!user || !userBorrow) {
+        return next(new ErrorHandler("Active user borrowing record not found.", 400));
+    }
+
+    const returnDate = new Date();
+    borrow.returnDate = returnDate;
+    borrow.fine = calculateFine(borrow.dueDate);
+    borrow.status = "returned";
+    await borrow.save();
+
+    userBorrow.returned = true;
+    userBorrow.returnedDate = returnDate;
+    await user.save();
+
+    book.quantity += 1;
+    book.availability = book.quantity > 0;
+    await book.save();
+
+    request.status = "approved";
+    request.approvedDate = returnDate;
+    request.processedDate = returnDate;
+    request.processedBy = req.user._id;
+    await request.save();
+
+    res.status(200).json({ success: true, message: "Return approved successfully.", request });
+});
+
+export const rejectReturnRequest = catchAsyncErrors(async (req, res, next) => {
+    const request = await BorrowRequest.findOne({
+        _id: req.params.requestId,
+        requestType: "return",
+        status: "pending",
     });
+    if (!request) return next(new ErrorHandler("Pending return request not found.", 404));
+
+    const processedDate = new Date();
+    request.status = "rejected";
+    request.rejectedDate = processedDate;
+    request.processedDate = processedDate;
+    request.processedBy = req.user._id;
+    await request.save();
+
+    res.status(200).json({ success: true, message: "Return request rejected.", request });
 });
 
 export const renewBorrowedBook = async (req, res) => {

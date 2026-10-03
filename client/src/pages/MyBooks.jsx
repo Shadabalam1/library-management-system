@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 export default function MyBooks() {
   const navigate = useNavigate();
   const [borrowedBooks, setBorrowedBooks] = useState([]);
+  const [returnRequests, setReturnRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("borrowed"); // borrowed, history
 
@@ -15,6 +16,12 @@ export default function MyBooks() {
       setLoading(true);
       const response = await API.get("/borrow/my-borrowed-books");
       setBorrowedBooks(response.data.borrowedBooks || []);
+      const requestsResponse = await API.get("/borrow/my-requests");
+      setReturnRequests(
+        (requestsResponse.data.requests || []).filter(
+          (request) => request.requestType === "return"
+        )
+      );
     } catch (error) {
       console.error("Error fetching borrowed books:", error);
       toast.error("Failed to load borrowed books");
@@ -63,6 +70,11 @@ export default function MyBooks() {
   // Separate active and returned books
   const activeBooks = borrowedBooks.filter(book => !book.returned);
   const returnedBooks = borrowedBooks.filter(book => book.returned);
+
+  const getReturnRequest = (bookId) =>
+    returnRequests.find(
+      (request) => request.book?.id?.toString() === bookId.toString()
+    );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -135,6 +147,11 @@ export default function MyBooks() {
                   <div className="space-y-4">
                     {activeBooks.map((borrow) => (
                       <div key={borrow._id} className="bg-gray-50 rounded-lg p-6">
+                        {getReturnRequest(borrow.bookId) && (
+                          <div className="mb-4 inline-flex items-center rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800">
+                            Return request: {getReturnRequest(borrow.bookId).status}
+                          </div>
+                        )}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-gray-900">{borrow.bookTitle}</h3>
@@ -186,13 +203,22 @@ export default function MyBooks() {
                             )}
                             
                             {/* Return Button */}
-                            <button
-                              onClick={() => handleReturn(borrow.bookId)}
-                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                            >
-                              <i className="bi bi-box-arrow-in-left mr-1"></i>
-                              Return
-                            </button>
+                            {getReturnRequest(borrow.bookId)?.status === "pending" ? (
+                              <button
+                                disabled
+                                className="bg-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
+                              >
+                                Return Pending
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleReturn(borrow.bookId)}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                              >
+                                <i className="bi bi-box-arrow-in-left mr-1"></i>
+                                Return
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

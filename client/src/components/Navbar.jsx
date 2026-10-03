@@ -1,12 +1,13 @@
 
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import API from "../utils/axios";
 import toast from "react-hot-toast";
 
 export default function Navbar() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ✅ Add profile picture upload function
   const handleProfilePicUpload = async (e) => {
@@ -64,7 +65,7 @@ export default function Navbar() {
   if (!user) return null;
 
   return (
-    <nav className="bg-blue-500 backdrop-blur-md border-b border-white/30 sticky top-0 z-50">
+    <nav className="bg-slate-950 border-b border-white/10 sticky top-0 z-50 shadow-lg shadow-slate-950/10">
       {/* ✅ Hidden file input - Add this */}
       <input
         type="file"
@@ -76,10 +77,38 @@ export default function Navbar() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center">
-              <i className="bi bi-book text-black text-xl mr-2"></i>
-              <span className="text-black font-bold text-lg">LEARN HUB</span>
+            <div className="flex items-center gap-8">
+            <button onClick={() => navigate("/dashboard")} className="flex-shrink-0 flex items-center group">
+              <span className="w-9 h-9 rounded-xl bg-teal-400 text-slate-950 flex items-center justify-center mr-2 group-hover:bg-teal-300 transition-colors">
+                <i className="bi bi-book-half text-lg"></i>
+              </span>
+              <span className="text-white font-bold tracking-tight text-lg">LEARN HUB</span>
+            </button>
+            <div className="hidden md:flex items-center gap-1">
+              {(user.role?.toLowerCase() === "admin"
+                ? [{ label: "Admin Dashboard", path: "/admin/dashboard", icon: "bi-shield-check" }]
+                : [
+                    { label: "Dashboard", path: "/dashboard", icon: "bi-grid-1x2" },
+                    { label: "Browse Books", path: "/books", icon: "bi-search" },
+                    { label: "My Books", path: "/my-books", icon: "bi-bookmark" },
+                  ]
+              ).map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-white/10 text-teal-300"
+                        : "text-slate-300 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <i className={`bi ${item.icon}`}></i>
+                    {item.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
           
@@ -87,7 +116,7 @@ export default function Navbar() {
             {/* Profile Picture - Updated with camera icon */}
             <div className="relative">
               <div 
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/30 flex items-center justify-center cursor-pointer hover:bg-white/40 transition-colors"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 ring-2 ring-white/10 flex items-center justify-center cursor-pointer hover:bg-white/20 transition-colors"
                 onClick={() => {
                   const input = document.getElementById('profilePicInput');
                   if (input) input.click();
@@ -104,7 +133,7 @@ export default function Navbar() {
                 )}
               </div>
               {/* ✅ Add camera icon for visual feedback */}
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center border-2 border-blue-500">
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center border-2 border-slate-950">
                 <i className="bi bi-camera text-xs text-gray-600"></i>
               </div>
             </div>
@@ -112,7 +141,7 @@ export default function Navbar() {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center whitespace-nowrap"
+              className="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center whitespace-nowrap"
             >
               <i className="bi bi-box-arrow-right mr-1 text-sm"></i>
               <span className="hidden xs:inline">Logout</span>

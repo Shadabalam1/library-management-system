@@ -28,11 +28,11 @@ function AdminProtectedRoute({ children }) {
   }
   
   // Check if user is admin
-  if (user && user.role === "Admin") {
+  if (user?.role?.toLowerCase() === "admin") {
     return children;
   }
   
-  return <Navigate to="/login" />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function ProtectedRoute({ children }) {
@@ -46,7 +46,15 @@ function ProtectedRoute({ children }) {
     );
   }
   
-  return user ? children : <Navigate to="/login" />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role?.toLowerCase() === "admin") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return children;
 }
 
 export default function AppRoutes() {
@@ -73,7 +81,14 @@ export default function AppRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/password/reset/:token" element={<ResetPassword />} />
-          <Route path="/admin/edit-book/:id" element={<EditBook />} />
+          <Route
+            path="/admin/edit-book/:id"
+            element={
+              <AdminProtectedRoute>
+                <EditBook />
+              </AdminProtectedRoute>
+            }
+          />
           {/* ✅ User Protected Routes */}
           <Route
             path="/dashboard"
